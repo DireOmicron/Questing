@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Quest Preferences</title>
   <style>
     body {
@@ -10,7 +10,6 @@
       background: #f2f4f8;
       padding: 30px;
     }
-
     .container {
       max-width: 600px;
       margin: auto;
@@ -19,19 +18,17 @@
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-
-    h1, h2 {
+    h1 {
       text-align: center;
+      margin-bottom: 20px;
       color: #2c3e50;
     }
-
     label {
       display: block;
       margin-top: 15px;
       font-weight: 600;
     }
-
-    input[type="text"], input[type="email"], textarea, select {
+    input[type="text"], textarea, select {
       width: 100%;
       padding: 10px;
       margin-top: 6px;
@@ -39,21 +36,18 @@
       border-radius: 6px;
       font-size: 1em;
     }
-
     .checkbox-group {
       display: flex;
       flex-wrap: wrap;
       gap: 15px;
       margin-top: 10px;
     }
-
     .checkbox-group label {
       font-weight: normal;
       display: flex;
       align-items: center;
       gap: 6px;
     }
-
     button {
       margin-top: 25px;
       width: 100%;
@@ -65,11 +59,9 @@
       font-size: 1em;
       cursor: pointer;
     }
-
     button:hover {
       background: #2980b9;
     }
-
     #output {
       margin-top: 30px;
       padding: 20px;
@@ -77,7 +69,6 @@
       border-radius: 8px;
       white-space: pre-wrap;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
@@ -91,49 +82,23 @@
     th {
       background-color: #eee;
     }
-
-    #prefForm, #regenerateBtn, #logoutBtn {
-      display: none;
-    }
-
-    #auth-section {
-      max-width: 400px;
-      margin: auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-
-    #auth-status {
-      margin-top: 10px;
-      color: green;
-    }
-
   </style>
+
+  <!-- Load Supabase library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    // Initialize Supabase client
-    const supabase = createClient(
-      'https://ilxfdmrmmwubonhhehli.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlseGZkbXJtbXd1Ym9uaGhlaGxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxNzcwMjUsImV4cCI6MjA2NDc1MzAyNX0.8pGK56shCloMDmW59wqpn0vBJ01LvrtU8CITSFn46Iw'
-    );
-  </script>
+
 </head>
 <body>
-  <div id="auth-section" class="container">
-    <h2>Sign In</h2>
-    <input type="email" id="email" placeholder="Enter your email" />
-    <button id="loginBtn">Send Magic Link</button>
-    <p id="auth-status"></p>
-  </div>
-
-  <div class="container" id="main-content">
-    <button id="logoutBtn" style="margin-bottom: 20px;">Log Out</button>
-
+  <div class="container">
     <h1>Set Your Quest Preferences</h1>
-    <form id="prefForm">
+
+    <div id="auth-section">
+      <button id="signInBtn">Sign In (Magic Link)</button>
+      <button id="signOutBtn" style="display:none;">Sign Out</button>
+      <p id="userInfo">Checking login status...</p>
+    </div>
+
+    <form id="prefForm" style="display:none;">
       <label>Your Location:</label>
       <input type="text" id="autocomplete" placeholder="Start typing an address, city, or ZIP..." />
 
@@ -157,18 +122,19 @@
       <button type="submit">Submit Preferences</button>
     </form>
 
-    <button id="regenerateBtn">Regenerate My Quests</button>
-
     <div id="output"></div>
   </div>
 
+  <!-- Google Places API -->
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAzhzBrT-PlDN1oXBgmLDV15VQ47OpwuTc&libraries=places"></script>
+
   <script>
+    // Initialize Google Places autocomplete
     function initAutocomplete() {
       const input = document.getElementById("autocomplete");
-      const options = { types: ['geocode'], region: { country: "us" } };
+      const options = { types: ['geocode'], componentRestrictions: { country: "us" } };
       const autocomplete = new google.maps.places.Autocomplete(input, options);
-      autocomplete.addListener('place_changed', function () {
+      autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
         console.log("Selected place:", place);
       });
@@ -177,132 +143,78 @@
   </script>
 
   <script>
-    const loginBtn = document.getElementById("loginBtn");
-    const emailInput = document.getElementById("email");
-    const authStatus = document.getElementById("auth-status");
-    const prefForm = document.getElementById("prefForm");
-    const output = document.getElementById("output");
-    const regenerateBtn = document.getElementById("regenerateBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const authSection = document.getElementById("auth-section");
-    const mainContent = document.getElementById("main-content");
+  document.addEventListener('DOMContentLoaded', async () => {
+    const supabaseUrl = 'https://ilxfdmrmmwubonhhehli.supabase.co';
+    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlseGZkbXJtbXd1Ym9uaGhlaGxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxNzcwMjUsImV4cCI6MjA2NDc1MzAyNX0.8pGK56shCloMDmW59wqpn0vBJ01LvrtU8CITSFn46Iw';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-    // Handle login
-    loginBtn.addEventListener("click", async () => {
-      const email = emailInput.value.trim();
-      if (!email) {
-        authStatus.textContent = "Please enter your email.";
-        authStatus.style.color = "red";
-        return;
-      }
-      const { error } = await supabase.auth.signInWithOtp({ email });
+    const signInBtn = document.getElementById('signInBtn');
+    const signOutBtn = document.getElementById('signOutBtn');
+    const userInfo = document.getElementById('userInfo');
+    const form = document.getElementById('prefForm');
+    const output = document.getElementById('output');
+
+    async function checkUser() {
+      const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
-        authStatus.textContent = "Error sending magic link.";
-        authStatus.style.color = "red";
+        console.error("Session error:", error.message);
+        userInfo.textContent = "Error checking session.";
+        return;
+      }
+
+      if (session?.user) {
+        userInfo.textContent = `Signed in as ${session.user.email}`;
+        signInBtn.style.display = 'none';
+        signOutBtn.style.display = 'inline-block';
+        form.style.display = 'block';
       } else {
-        authStatus.textContent = "Magic link sent! Check your email.";
-        authStatus.style.color = "green";
+        userInfo.textContent = 'Not signed in';
+        signInBtn.style.display = 'inline-block';
+        signOutBtn.style.display = 'none';
+        form.style.display = 'none';
       }
-    });
-
-    // Handle logout
-    logoutBtn.addEventListener("click", async () => {
-      await supabase.auth.signOut();
-      showLoggedOut();
-    });
-
-    function showLoggedOut() {
-      authSection.style.display = "block";
-      mainContent.style.display = "none";
-      authStatus.textContent = "";
-      emailInput.value = "";
-      output.innerHTML = "";
-      regenerateBtn.style.display = "none";
-      prefForm.style.display = "none";
-      logoutBtn.style.display = "none";
     }
 
-    function showLoggedIn() {
-      authSection.style.display = "none";
-      mainContent.style.display = "block";
-      regenerateBtn.style.display = "block";
-      prefForm.style.display = "block";
-      logoutBtn.style.display = "inline-block";
-    }
+    signInBtn.addEventListener('click', async () => {
+      const email = prompt('Enter your email to receive a magic login link:');
+      if (!email) return alert('Email is required.');
 
-    // On auth state change
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session && session.user) {
-        showLoggedIn();
-        await fetchUserQuests();
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: window.location.origin + '/Questing/'
+        }
+      });
+
+      if (error) {
+        alert('Error sending link: ' + error.message);
       } else {
-        showLoggedOut();
+        alert('Magic link sent! Check your email.');
       }
     });
 
-    // Fetch the latest quests for logged-in user
-    async function fetchUserQuests() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    signOutBtn.addEventListener('click', async () => {
+      const { error } = await supabase.auth.signOut();
+      if (error) alert('Error signing out: ' + error.message);
+      await checkUser();
+    });
 
-      // Get latest preferences for user
-      const { data: preferences, error: prefErr } = await supabase
-        .from("preferences")
-        .select("id")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1);
+    supabase.auth.onAuthStateChange((_event, session) => {
+      checkUser();
+    });
 
-      if (prefErr) {
-        output.innerHTML = "<p>Error loading your quests.</p>";
-        console.error(prefErr);
-        return;
-      }
-      if (!preferences || preferences.length === 0) {
-        output.innerHTML = "<p>No quests found. Submit your preferences first.</p>";
-        return;
-      }
+    await checkUser();
 
-      const prefId = preferences[0].id;
-
-      // Get quests linked to that preference
-      const { data: quests, error: questErr } = await supabase
-        .from("quests")
-        .select("*")
-        .eq("preference_id", prefId);
-
-      if (questErr) {
-        output.innerHTML = "<p>Error loading quests.</p>";
-        console.error(questErr);
-        return;
-      }
-      if (!quests || quests.length === 0) {
-        output.innerHTML = "<p>No quests found for your preferences.</p>";
-        return;
-      }
-
-      output.innerHTML = `
-        <h2>Your Personalized Quests</h2>
-        <table>
-          <tr><th>Title</th><th>Description</th><th>Points</th><th>Type</th><th>Bonus</th><th>Bonus Points</th></tr>
-          ${quests.map(q => `
-            <tr>
-              <td>${q.title}</td>
-              <td>${q.description}</td>
-              <td>${q.points}</td>
-              <td>${q.type}</td>
-              <td>${q.bonusObjective || '-'}</td>
-              <td>${q.bonusPoints || 0}</td>
-            </tr>
-          `).join('')}
-        </table>
-      `;
-    }
-
-    // Handle form submit
-    prefForm.addEventListener("submit", async e => {
+    form.addEventListener("submit", async function(e) {
       e.preventDefault();
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        output.innerHTML = "<p>You must be signed in to submit preferences.</p>";
+        return;
+      }
+
+      const user_id = session.user.id;
       const location = document.getElementById("autocomplete").value.trim();
       const blurb = document.getElementById("blurb").value.trim();
       const questTypes = Array.from(document.querySelectorAll(".questType:checked")).map(el => el.value);
@@ -316,83 +228,38 @@
       output.innerHTML = "<p><em>Generating your quest...</em></p>";
 
       try {
-        await generateQuestWithAI(location, questTypes, transports, blurb);
-        await fetchUserQuests();
-      } catch (error) {
-        console.error(error);
+        const response = await fetch("https://questingbackend.onrender.com/generate-quest", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id, location, questTypes, transports, blurb })
+        });
+
+        const data = await response.json();
+
+        if (!data.quest || !Array.isArray(data.quest)) throw new Error("Invalid quest data");
+
+        output.innerHTML = `
+          <h2>Your Weekly Quests</h2>
+          <table>
+            <tr><th>Title</th><th>Description</th><th>Points</th><th>Type</th><th>Bonus</th><th>Bonus Points</th></tr>
+            ${data.quest.map(q => `
+              <tr>
+                <td>${q.title}</td>
+                <td>${q.description}</td>
+                <td>${q.points}</td>
+                <td>${q.type}</td>
+                <td>${q.bonusObjective || '-'}</td>
+                <td>${q.bonusPoints || 0}</td>
+              </tr>
+            `).join('')}
+          </table>
+        `;
+      } catch (err) {
+        console.error(err);
         output.innerHTML = "<p>There was an error generating your quest. Please try again.</p>";
       }
     });
-
-    // Regenerate quests button
-    regenerateBtn.addEventListener("click", async () => {
-      // Just regenerate using current form values if possible
-      const location = document.getElementById("autocomplete").value.trim();
-      const blurb = document.getElementById("blurb").value.trim();
-      const questTypes = Array.from(document.querySelectorAll(".questType:checked")).map(el => el.value);
-      const transports = Array.from(document.querySelectorAll(".transport:checked")).map(el => el.value);
-
-      if (!location || questTypes.length === 0 || transports.length === 0) {
-        output.innerHTML = "<p>Please fill in all fields first.</p>";
-        return;
-      }
-
-      output.innerHTML = "<p><em>Regenerating your quests...</em></p>";
-
-      try {
-        await generateQuestWithAI(location, questTypes, transports, blurb);
-        await fetchUserQuests();
-      } catch (error) {
-        console.error(error);
-        output.innerHTML = "<p>Failed to regenerate quests.</p>";
-      }
-    });
-
-    // Generate quests via backend & save to Supabase
-    async function generateQuestWithAI(location, questTypes, transports, blurb) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const response = await fetch("https://questingbackend.onrender.com/generate-quest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ location, questTypes, transports, blurb })
-      });
-
-      const data = await response.json();
-      const questData = data.quest;
-
-      if (!questData || !Array.isArray(questData)) throw new Error("Invalid quest data");
-
-      // Insert new preferences for user
-      const { data: prefInsert, error: prefError } = await supabase
-        .from("preferences")
-        .insert({ user_id: user.id, location, quest_types: questTypes, transports, blurb })
-        .select()
-        .single();
-
-      if (prefError) throw prefError;
-
-      const prefId = prefInsert.id;
-
-      // Insert quests linked to preference
-      for (const q of questData) {
-        const { error: questError } = await supabase
-          .from("quests")
-          .insert({
-            preference_id: prefId,
-            title: q.title,
-            description: q.description,
-            points: q.points,
-            type: q.type,
-            bonusObjective: q.bonusObjective || null,
-            bonusPoints: q.bonusPoints || 0
-          });
-        if (questError) throw questError;
-      }
-
-      return questData;
-    }
-  </script>
+  });
+</script>
 </body>
 </html>
