@@ -163,34 +163,22 @@
     const output = document.getElementById('output');
     const authMessage = document.getElementById('authMessage');
 
-    // Handle initial auth callback if present
-    async function handleAuthCallback() {
-      const urlHash = window.location.hash;
+    // Listen for messages from magic link popup/tab
+    window.addEventListener('message', (event) => {
+      if (event.origin !== window.location.origin) return;
       
-      if (urlHash && (urlHash.includes('access_token') || urlHash.includes('refresh_token'))) {
-        console.log('Auth callback detected, processing tokens...');
-        
-        // Give Supabase a moment to process the hash fragments
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Clean up the URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Show success message
-        authMessage.textContent = 'Successfully signed in via magic link!';
+      if (event.data.type === 'SUPABASE_AUTH_SUCCESS') {
+        authMessage.textContent = 'Successfully signed in! Welcome back.';
         authMessage.style.display = 'block';
         setTimeout(() => {
           authMessage.style.display = 'none';
         }, 5000);
-        
-        return true; // Indicates we handled a callback
+        checkUser();
       }
-      return false;
-    }
+    });
 
-    async function updateUI() {
+    async function checkUser() {
       const { data: { session }, error } = await supabase.auth.getSession();
-      
       if (error) {
         console.error("Session error:", error.message);
         userInfo.textContent = "Error checking session.";
@@ -202,6 +190,16 @@
         signInBtn.style.display = 'none';
         signOutBtn.style.display = 'inline-block';
         form.style.display = 'block';
+        
+        // Check if this is a magic link callback and we have an opener
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('access_token') && window.opener && !window.opener.closed) {
+          // Notify the parent window of successful auth
+          window.opener.postMessage({ type: 'SUPABASE_AUTH_SUCCESS' }, window.location.origin);
+          // Close this popup/tab
+          window.close();
+          return;
+        }
       } else {
         userInfo.textContent = 'Not signed in';
         signInBtn.style.display = 'inline-block';
@@ -210,57 +208,39 @@
       }
     }
 
-    // Set up auth state change listener FIRST
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.email);
-      
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        await updateUI();
-      }
-    });
-
-    // Handle initial load
-    const wasCallback = await handleAuthCallback();
-    
-    // If this wasn't a callback, or after processing callback, update UI
-    if (!wasCallback) {
-      await updateUI();
-    } else {
-      // If it was a callback, wait a bit longer and then update UI
-      setTimeout(async () => {
-        await updateUI();
-      }, 500);
-    }
-
     signInBtn.addEventListener('click', async () => {
       const email = prompt('Enter your email to receive a magic login link:');
       if (!email) return alert('Email is required.');
 
-      // Get the exact current page URL
-      let redirectUrl = window.location.href;
-      if (redirectUrl.includes('#')) {
-        redirectUrl = redirectUrl.split('#')[0];
-      }
-
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: redirectUrl
+          emailRedirectTo: window.location.origin + window.location.pathname
         }
       });
 
       if (error) {
         alert('Error sending link: ' + error.message);
       } else {
-        alert('Magic link sent! Check your email.');
+        alert('Magic link sent! Check your email. When you click the link, it will automatically sign you in here.');
       }
     });
 
     signOutBtn.addEventListener('click', async () => {
       const { error } = await supabase.auth.signOut();
       if (error) alert('Error signing out: ' + error.message);
-      // UI will update automatically via onAuthStateChange
+      await checkUser();
     });
+
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN') {
+        await checkUser();
+      } else if (event === 'SIGNED_OUT') {
+        await checkUser();
+      }
+    });
+
+    await checkUser();
 
     form.addEventListener("submit", async function(e) {
       e.preventDefault();
