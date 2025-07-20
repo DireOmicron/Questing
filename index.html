@@ -185,20 +185,6 @@
         return;
       }
 
-      // Check if this is a magic link callback (has hash fragments)
-      const urlHash = window.location.hash;
-      if (urlHash && (urlHash.includes('access_token') || urlHash.includes('refresh_token'))) {
-        // Clean up the URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Show success message
-        authMessage.textContent = 'Successfully signed in via magic link!';
-        authMessage.style.display = 'block';
-        setTimeout(() => {
-          authMessage.style.display = 'none';
-        }, 5000);
-      }
-
       if (session?.user) {
         userInfo.textContent = `Signed in as ${session.user.email}`;
         signInBtn.style.display = 'none';
@@ -216,20 +202,17 @@
       const email = prompt('Enter your email to receive a magic login link:');
       if (!email) return alert('Email is required.');
 
-      // Store the current tab reference
-      window.name = 'mainQuestTab';
-
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: window.location.origin + '/Questing/auth-callback.html'
+          emailRedirectTo: 'https://direomicron.github.io/Questing/auth-callback.html'
         }
       });
 
       if (error) {
         alert('Error sending link: ' + error.message);
       } else {
-        alert('Magic link sent! Check your email. The link will open in this same tab.');
+        alert('Magic link sent! Check your email. The link will sign you in and redirect back here.');
       }
     });
 
