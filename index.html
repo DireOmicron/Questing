@@ -102,7 +102,7 @@
     // Initialize Supabase client
     const supabase = createClient(
       'https://ilxfdmrmmwubonhhehli.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlseGZkbXJtbXd1Ym9uaGhlaGxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxNzcwMjUsImV4cCI6MjA2NDc1MzAyNX0.8pGK56shCloMDmW59wqpn0vBJ01LvrtU8CITSFn46Iw' // Replace with your anon key securely in prod
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlseGZkbXJtbXd1Ym9uaGhlaGxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxNzcwMjUsImV4cCI6MjA2NDc1MzAyNX0.8pGK56shCloMDmW59wqpn0vBJ01LvrtU8CITSFn46Iw'
     );
   </script>
 </head>
@@ -158,6 +158,7 @@
 
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAzhzBrT-PlDN1oXBgmLDV15VQ47OpwuTc&libraries=places"></script>
   <script>
+    // Initialize Google Places Autocomplete
     function initAutocomplete() {
       const input = document.getElementById("autocomplete");
       const options = { types: ['geocode'], region: { country: "us" } };
@@ -168,27 +169,23 @@
       });
     }
 
-    // Auth elements
+    // Elements
     const authContainer = document.getElementById('authContainer');
     const prefContainer = document.getElementById('prefContainer');
     const questsContainer = document.getElementById('questsContainer');
     const authMessage = document.getElementById('authMessage');
 
-    // Auth inputs and buttons
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     const btnSignUp = document.getElementById('btnSignUp');
     const btnLogin = document.getElementById('btnLogin');
     const logoutBtn = document.getElementById('logoutBtn');
 
-    // Quest form and output div
     const form = document.getElementById("prefForm");
     const output = document.getElementById("output");
 
-    // Current logged in user
     let currentUser = null;
 
-    // Show/hide containers helper
     function showContainer(container) {
       authContainer.style.display = 'none';
       prefContainer.style.display = 'none';
@@ -197,15 +194,17 @@
       container.style.display = 'block';
     }
 
-    // On login success: show preferences form
+    // On successful login
     function onUserLoggedIn(user) {
       currentUser = user;
       showContainer(prefContainer);
       initAutocomplete();
       authMessage.textContent = '';
+      emailInput.value = '';
+      passwordInput.value = '';
     }
 
-    // Sign up handler
+    // Sign Up
     btnSignUp.onclick = async () => {
       const email = emailInput.value.trim();
       const password = passwordInput.value.trim();
@@ -223,7 +222,7 @@
       }
     };
 
-    // Login handler
+    // Login
     btnLogin.onclick = async () => {
       const email = emailInput.value.trim();
       const password = passwordInput.value.trim();
@@ -241,18 +240,16 @@
       }
     };
 
-    // Logout handler
+    // Logout
     logoutBtn.onclick = async () => {
       await supabase.auth.signOut();
       currentUser = null;
-      showContainer(authContainer);
       output.innerHTML = '';
       form.reset();
-      emailInput.value = '';
-      passwordInput.value = '';
+      showContainer(authContainer);
     };
 
-    // On page load, check if user is logged in
+    // On page load check if user logged in
     window.onload = async () => {
       const { data } = await supabase.auth.getSession();
       if (data.session?.user) {
@@ -320,7 +317,7 @@
           });
         }
 
-        // Display quests & hide preferences form
+        // Show quests container and display quest table
         form.reset();
         showContainer(questsContainer);
 
