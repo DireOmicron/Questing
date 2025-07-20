@@ -202,10 +202,21 @@
       const email = prompt('Enter your email to receive a magic login link:');
       if (!email) return alert('Email is required.');
 
+      // Get the exact current page URL (replace 'auth-callback.html' with your actual filename if different)
+      let redirectUrl = window.location.href;
+      if (redirectUrl.includes('#')) {
+        redirectUrl = redirectUrl.split('#')[0];
+      }
+      
+      // If somehow we're on auth-callback.html, redirect to the main page
+      if (redirectUrl.includes('auth-callback.html')) {
+        redirectUrl = redirectUrl.replace('auth-callback.html', 'index.html'); // Change 'index.html' to your actual main page filename
+      }
+
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: window.location.href
+          emailRedirectTo: redirectUrl
         }
       });
 
