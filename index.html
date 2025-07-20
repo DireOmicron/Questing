@@ -163,6 +163,34 @@
     const output = document.getElementById('output');
     const authMessage = document.getElementById('authMessage');
 
+    // Handle magic link authentication on page load
+    async function handleAuthCallback() {
+      // Check if URL contains auth tokens (magic link callback)
+      if (window.location.hash && window.location.hash.includes('access_token')) {
+        try {
+          // Extract session from URL
+          const { data, error } = await supabase.auth.getSessionFromUrl();
+          
+          if (error) {
+            console.error('Auth callback error:', error.message);
+            authMessage.textContent = `Authentication error: ${error.message}`;
+            authMessage.style.display = 'block';
+          } else if (data.session) {
+            // Successfully authenticated
+            authMessage.textContent = 'Successfully signed in!';
+            authMessage.style.display = 'block';
+            
+            // Clean up the URL
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        } catch (err) {
+          console.error('Error handling auth callback:', err);
+          authMessage.textContent = 'Error processing authentication';
+          authMessage.style.display = 'block';
+        }
+      }
+    }
+
     async function checkUser() {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
@@ -176,11 +204,6 @@
         signInBtn.style.display = 'none';
         signOutBtn.style.display = 'inline-block';
         form.style.display = 'block';
-
-        // Clean up the URL hash after successful login
-        if (window.location.hash) {
-          window.history.replaceState(null, '', window.location.pathname);
-        }
       } else {
         userInfo.textContent = 'Not signed in';
         signInBtn.style.display = 'inline-block';
@@ -188,6 +211,10 @@
         form.style.display = 'none';
       }
     }
+
+    // Handle auth callback first, then check user status
+    await handleAuthCallback();
+    await checkUser();
 
     signInBtn.addEventListener('click', async () => {
       const email = prompt('Enter your email to receive a magic login link:');
@@ -211,13 +238,13 @@
       const { error } = await supabase.auth.signOut();
       if (error) alert('Error signing out: ' + error.message);
       await checkUser();
+      // Hide auth message on sign out
+      authMessage.style.display = 'none';
     });
 
     supabase.auth.onAuthStateChange(async (event, session) => {
       await checkUser();
     });
-
-    await checkUser();
 
     form.addEventListener("submit", async function(e) {
       e.preventDefault();
@@ -274,6 +301,6 @@
       }
     });
   });
-</script>
+</script> 
 </body>
 </html>
