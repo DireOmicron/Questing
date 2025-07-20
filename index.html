@@ -85,13 +85,14 @@
   </style>
 
   <!-- Load Supabase library first -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  window.supabase = supabase = Supabase.createClient(
-    'https://ilxfdmrmmwubonhhehli.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlseGZkbXJtbXd1Ym9uaGhlaGxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxNzcwMjUsImV4cCI6MjA2NDc1MzAyNX0.8pGK56shCloMDmW59wqpn0vBJ01LvrtU8CITSFn46Iw'
-  );
-</script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Initialize Supabase client correctly (fixing the method name)
+    window.supabase = supabase = supabase.createClient(
+      'https://ilxfdmrmmwubonhhehli.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlseGZkbXJtbXd1Ym9uaGhlaGxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxNzcwMjUsImV4cCI6MjA2NDc1MzAyNX0.8pGK56shCloMDmW59wqpn0vBJ01LvrtU8CITSFn46Iw'
+    );
+  </script>
 </head>
 <body>
   <div class="container">
@@ -134,7 +135,7 @@
   <script>
     function initAutocomplete() {
       const input = document.getElementById("autocomplete");
-      const options = { types: ['geocode'], region: { country: "us" } };
+      const options = { types: ['geocode'], componentRestrictions: { country: "us" } };
       const autocomplete = new google.maps.places.Autocomplete(input, options);
       autocomplete.addListener('place_changed', function () {
         const place = autocomplete.getPlace();
@@ -150,6 +151,8 @@
     const userInfo = document.getElementById('userInfo');
     const form = document.getElementById('prefForm');
     const output = document.getElementById('output');
+
+    const redirectUrl = 'https://direomicron.github.io/Questing/';  // Your GitHub Pages URL
 
     async function checkUser() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -169,7 +172,12 @@
     signInBtn.addEventListener('click', async () => {
       const email = prompt('Enter your email for magic link sign-in:');
       if (!email) return alert('Email is required');
-      const { error } = await supabase.auth.signInWithOtp({ email });
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: redirectUrl }
+      });
+
       if (error) alert('Error sending magic link: ' + error.message);
       else alert('Magic link sent! Check your email.');
     });
@@ -218,8 +226,6 @@
         const data = await response.json();
 
         if (!data.quest || !Array.isArray(data.quest)) throw new Error("Invalid quest data");
-
-        // Optionally insert preferences & quests in supabase (backend already does this, so may skip)
 
         output.innerHTML = `
           <h2>Your Weekly Quests</h2>
