@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signing you in...</title>
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background: #f2f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .auth-container {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error {
+            color: #e74c3c;
+            margin-top: 20px;
+        }
+        .success {
+            color: #27ae60;
+            margin-top: 20px;
+        }
+    </style>
+    <!-- Load Supabase library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="auth-container">
+        <h2>Signing you in...</h2>
+        <div class="spinner"></div>
+        <p id="status">Please wait while we authenticate you...</p>
+        <p id="message"></p>
+        
+        <!-- Fallback link in case redirect doesn't work -->
+        <p style="margin-top: 30px;">
+            <a href="./" id="fallback-link" style="display: none; color: #3498db; text-decoration: none;">
+                Click here if you're not redirected automatically
+            </a>
+        </p>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://ilxfdmrmmwubonhhehli.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlseGZkbXJtbXd1Ym9uaGhlaGxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxNzcwMjUsImV4cCI6MjA2NDc1MzAyNX0.8pGK56shCloMDmW59wqpn0vBJ01LvrtU8CITSFn46Iw';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+        
+        const statusEl = document.getElementById('status');
+        const messageEl = document.getElementById('message');
+        const fallbackLink = document.getElementById('fallback-link');
+        
+        let redirected = false;
+        
+        async function handleAuth() {
+            try {
+                // First, let Supabase process the URL fragments
+                const { data, error } = await supabase.auth.getSession();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                if (data.session) {
+                    // Success! User is authenticated
+                    statusEl.textContent = 'Success!';
+                    messageEl.textContent = 'Redirecting you back to Quest Preferences...';
+                    messageEl.className = 'success';
+                    
+                    // Wait a moment then redirect
+                    setTimeout(() => {
+                        if (!redirected) {
+                            redirected = true;
+                            window.location.href = './';
+                        }
+                    }, 1500);
+                } else {
+                    // No session yet, wait for auth state change
+                    statusEl.textContent = 'Processing authentication...';
+                }
+            } catch (error) {
+                console.error('Auth error:', error);
+                statusEl.textContent = 'Authentication Error';
+                messageEl.textContent = `Error: ${error.message}`;
+                messageEl.className = 'error';
+                fallbackLink.style.display = 'inline';
+            }
+        }
+        
+        // Listen for auth state changes
+        supabase.auth.onAuthStateChange((event, session) => {
+            console.log('Auth event:', event, session);
+            
+            if (event === 'SIGNED_IN' && session && !redirected) {
+                redirected = true;
+                statusEl.textContent = 'Successfully signed in!';
+                messageEl.textContent = 'Redirecting you back to Quest Preferences...';
+                messageEl.className = 'success';
+                
+                // Redirect after a brief delay
+                setTimeout(() => {
+                    window.location.href = './';
+                }, 1500);
+            } else if (event === 'SIGNED_OUT') {
+                statusEl.textContent = 'Authentication Failed';
+                messageEl.textContent = 'Unable to sign you in. Please try again.';
+                messageEl.className = 'error';
+                fallbackLink.style.display = 'inline';
+            }
+        });
+        
+        // Start the auth process
+        handleAuth();
+        
+        // Fallback: if nothing happens after 10 seconds, show the manual link
+        setTimeout(() => {
+            if (!redirected) {
+                fallbackLink.style.display = 'inline';
+            }
+        }, 10000);
+    </script>
+</body>
+</html>
