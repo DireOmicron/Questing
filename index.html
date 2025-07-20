@@ -84,14 +84,15 @@
     }
   </style>
 
-  <!-- Load Supabase library first -->
+  <!-- Load Supabase library (v2) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Initialize Supabase client correctly (fixing the method name)
-    window.supabase = supabase = supabase.createClient(
+    // Correct supabase client initialization for v2
+    const supabase = supabase.createClient(
       'https://ilxfdmrmmwubonhhehli.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlseGZkbXJtbXd1Ym9uaGhlaGxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxNzcwMjUsImV4cCI6MjA2NDc1MzAyNX0.8pGK56shCloMDmW59wqpn0vBJ01LvrtU8CITSFn46Iw'
     );
+    window.supabase = supabase; // optional global for debugging
   </script>
 </head>
 <body>
@@ -152,8 +153,7 @@
     const form = document.getElementById('prefForm');
     const output = document.getElementById('output');
 
-    const redirectUrl = 'https://direomicron.github.io/Questing/';  // Your GitHub Pages URL
-
+    // Check user session and update UI accordingly
     async function checkUser() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
@@ -172,12 +172,11 @@
     signInBtn.addEventListener('click', async () => {
       const email = prompt('Enter your email for magic link sign-in:');
       if (!email) return alert('Email is required');
-
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: redirectUrl }
+        // Optional redirect url after magic link sign in:
+        options: { emailRedirectTo: 'https://direomicron.github.io/Questing/' }
       });
-
       if (error) alert('Error sending magic link: ' + error.message);
       else alert('Magic link sent! Check your email.');
     });
@@ -188,12 +187,15 @@
       else checkUser();
     });
 
+    // Listen to auth state changes and update UI
     supabase.auth.onAuthStateChange((_event, session) => {
       checkUser();
     });
 
+    // Initial check on page load
     checkUser();
 
+    // Form submission to backend API
     form.addEventListener("submit", async function(e) {
       e.preventDefault();
 
