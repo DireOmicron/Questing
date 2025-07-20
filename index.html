@@ -163,17 +163,16 @@
     const output = document.getElementById('output');
     const authMessage = document.getElementById('authMessage');
 
-    async function checkUser() {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error("Session error:", error.message);
-        userInfo.textContent = "Error checking session.";
-        return;
-      }
-
-      // Check if this is a magic link callback (has hash fragments)
+    // Handle initial auth callback if present
+    async function handleAuthCallback() {
       const urlHash = window.location.hash;
+      
       if (urlHash && (urlHash.includes('access_token') || urlHash.includes('refresh_token'))) {
+        console.log('Auth callback detected, processing tokens...');
+        
+        // Give Supabase a moment to process the hash fragments
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         // Clean up the URL
         window.history.replaceState({}, document.title, window.location.pathname);
         
@@ -183,6 +182,19 @@
         setTimeout(() => {
           authMessage.style.display = 'none';
         }, 5000);
+        
+        return true; // Indicates we handled a callback
+      }
+      return false;
+    }
+
+    async function updateUI() {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error("Session error:", error.message);
+        userInfo.textContent = "Error checking session.";
+        return;
       }
 
       if (session?.user) {
@@ -198,19 +210,36 @@
       }
     }
 
+    // Set up auth state change listener FIRST
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.email);
+      
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        await updateUI();
+      }
+    });
+
+    // Handle initial load
+    const wasCallback = await handleAuthCallback();
+    
+    // If this wasn't a callback, or after processing callback, update UI
+    if (!wasCallback) {
+      await updateUI();
+    } else {
+      // If it was a callback, wait a bit longer and then update UI
+      setTimeout(async () => {
+        await updateUI();
+      }, 500);
+    }
+
     signInBtn.addEventListener('click', async () => {
       const email = prompt('Enter your email to receive a magic login link:');
       if (!email) return alert('Email is required.');
 
-      // Get the exact current page URL (replace 'auth-callback.html' with your actual filename if different)
+      // Get the exact current page URL
       let redirectUrl = window.location.href;
       if (redirectUrl.includes('#')) {
         redirectUrl = redirectUrl.split('#')[0];
-      }
-      
-      // If somehow we're on auth-callback.html, redirect to the main page
-      if (redirectUrl.includes('auth-callback.html')) {
-        redirectUrl = redirectUrl.replace('auth-callback.html', 'index.html'); // Change 'index.html' to your actual main page filename
       }
 
       const { error } = await supabase.auth.signInWithOtp({
@@ -230,18 +259,8 @@
     signOutBtn.addEventListener('click', async () => {
       const { error } = await supabase.auth.signOut();
       if (error) alert('Error signing out: ' + error.message);
-      await checkUser();
+      // UI will update automatically via onAuthStateChange
     });
-
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN') {
-        await checkUser();
-      } else if (event === 'SIGNED_OUT') {
-        await checkUser();
-      }
-    });
-
-    await checkUser();
 
     form.addEventListener("submit", async function(e) {
       e.preventDefault();
