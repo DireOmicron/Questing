@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quest Preferences</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f2f4f8;
+      padding: 30px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #ffffff;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    h1, h2 {
+      text-align: center;
+      color: #2c3e50;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+    }
+
+    input[type="text"], input[type="email"], input[type="password"], textarea, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1em;
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-top: 10px;
+    }
+
+    .checkbox-group label {
+      font-weight: normal;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button {
+      margin-top: 25px;
+      width: 100%;
+      padding: 12px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #2980b9;
+    }
+
+    #output {
+      margin-top: 30px;
+      padding: 20px;
+      background: #ecf0f1;
+      border-radius: 8px;
+      white-space: pre-wrap;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #eee;
+    }
+
+    /* Hide these containers initially */
+    #prefContainer, #questsContainer {
+      display: none;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Initialize Supabase client
+    const supabase = createClient(
+      'https://ilxfdmrmmwubonhhehli.supabase.co',
+      'YOUR_ANON_KEY' // Replace with your anon key securely in prod
+    );
+  </script>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Auth container -->
+    <div id="authContainer">
+      <h1>Login or Sign Up</h1>
+      <input type="email" id="email" placeholder="Email" />
+      <input type="password" id="password" placeholder="Password" />
+      <button id="btnSignUp">Sign Up</button>
+      <button id="btnLogin">Login</button>
+      <p id="authMessage"></p>
+      <hr />
+    </div>
+
+    <!-- Preferences container -->
+    <div id="prefContainer">
+      <h1>Set Your Quest Preferences</h1>
+      <form id="prefForm">
+        <label>Your Location:</label>
+        <input type="text" id="autocomplete" placeholder="Start typing an address, city, or ZIP..." />
+
+        <label>Quest Type:</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" value="Free" class="questType"> Free</label>
+          <label><input type="checkbox" value="Paid" class="questType"> Paid</label>
+        </div>
+
+        <label>Available Transport:</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" value="Walking" class="transport"> Walking</label>
+          <label><input type="checkbox" value="Biking" class="transport"> Biking</label>
+          <label><input type="checkbox" value="Driving" class="transport"> Driving</label>
+          <label><input type="checkbox" value="Public Transit" class="transport"> Public Transit</label>
+        </div>
+
+        <label>Tell us a bit about yourself:</label>
+        <textarea id="blurb" rows="4" placeholder="e.g. I love bookstores, nature, and street food."></textarea>
+
+        <button type="submit">Submit Preferences</button>
+      </form>
+    </div>
+
+    <!-- Quests display container -->
+    <div id="questsContainer">
+      <h2>Your Weekly Quests</h2>
+      <div id="output"></div>
+      <button id="logoutBtn" style="margin-top:20px; background:#e74c3c;">Logout</button>
+    </div>
+  </div>
+
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAzhzBrT-PlDN1oXBgmLDV15VQ47OpwuTc&libraries=places"></script>
+  <script>
+    function initAutocomplete() {
+      const input = document.getElementById("autocomplete");
+      const options = { types: ['geocode'], region: { country: "us" } };
+      const autocomplete = new google.maps.places.Autocomplete(input, options);
+      autocomplete.addListener('place_changed', function () {
+        const place = autocomplete.getPlace();
+        console.log("Selected place:", place);
+      });
+    }
+
+    // Auth elements
+    const authContainer = document.getElementById('authContainer');
+    const prefContainer = document.getElementById('prefContainer');
+    const questsContainer = document.getElementById('questsContainer');
+    const authMessage = document.getElementById('authMessage');
+
+    // Auth inputs and buttons
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const btnSignUp = document.getElementById('btnSignUp');
+    const btnLogin = document.getElementById('btnLogin');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    // Quest form and output div
+    const form = document.getElementById("prefForm");
+    const output = document.getElementById("output");
+
+    // Current logged in user
+    let currentUser = null;
+
+    // Show/hide containers helper
+    function showContainer(container) {
+      authContainer.style.display = 'none';
+      prefContainer.style.display = 'none';
+      questsContainer.style.display = 'none';
+
+      container.style.display = 'block';
+    }
+
+    // On login success: show preferences form
+    function onUserLoggedIn(user) {
+      currentUser = user;
+      showContainer(prefContainer);
+      initAutocomplete();
+      authMessage.textContent = '';
+    }
+
+    // Sign up handler
+    btnSignUp.onclick = async () => {
+      const email = emailInput.value.trim();
+      const password = passwordInput.value.trim();
+
+      if (!email || !password) {
+        authMessage.textContent = 'Please enter email and password.';
+        return;
+      }
+
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        authMessage.textContent = 'Sign Up error: ' + error.message;
+      } else {
+        authMessage.textContent = 'Sign up successful! Please check your email to confirm.';
+      }
+    };
+
+    // Login handler
+    btnLogin.onclick = async () => {
+      const email = emailInput.value.trim();
+      const password = passwordInput.value.trim();
+
+      if (!email || !password) {
+        authMessage.textContent = 'Please enter email and password.';
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        authMessage.textContent = 'Login error: ' + error.message;
+      } else {
+        onUserLoggedIn(data.user);
+      }
+    };
+
+    // Logout handler
+    logoutBtn.onclick = async () => {
+      await supabase.auth.signOut();
+      currentUser = null;
+      showContainer(authContainer);
+      output.innerHTML = '';
+      form.reset();
+      emailInput.value = '';
+      passwordInput.value = '';
+    };
+
+    // On page load, check if user is logged in
+    window.onload = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.user) {
+        onUserLoggedIn(data.session.user);
+      } else {
+        showContainer(authContainer);
+      }
+    };
+
+    // Submit preferences and generate quests
+    form.addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      if (!currentUser) {
+        output.innerHTML = "<p>Please log in first.</p>";
+        return;
+      }
+
+      const location = document.getElementById("autocomplete").value.trim();
+      const blurb = document.getElementById("blurb").value.trim();
+      const questTypes = Array.from(document.querySelectorAll(".questType:checked")).map(el => el.value);
+      const transports = Array.from(document.querySelectorAll(".transport:checked")).map(el => el.value);
+
+      if (!location || questTypes.length === 0 || transports.length === 0) {
+        output.innerHTML = "<p>Please fill in all fields before submitting.</p>";
+        return;
+      }
+
+      output.innerHTML = "<p><em>Generating your quests...</em></p>";
+
+      try {
+        // Call backend AI quest generator
+        const response = await fetch("https://questingbackend.onrender.com/generate-quest", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ location, questTypes, transports, blurb })
+        });
+
+        const data = await response.json();
+        const questData = data.quest;
+
+        if (!questData || !Array.isArray(questData)) throw new Error("Invalid quest data");
+
+        // Insert preferences linked to user
+        const { data: prefInsert, error: prefError } = await supabase
+          .from('preferences')
+          .insert([{ location, quest_types: questTypes, transports, blurb, user_id: currentUser.id }])
+          .select()
+          .single();
+
+        if (prefError) throw prefError;
+        const prefId = prefInsert.id;
+
+        // Insert quests linked to user & preference
+        for (const q of questData) {
+          await supabase.from('quests').insert({
+            preference_id: prefId,
+            user_id: currentUser.id,
+            title: q.title,
+            description: q.description,
+            points: q.points,
+            type: q.type,
+            bonusObjective: q.bonusObjective || null,
+            bonusPoints: q.bonusPoints || 0
+          });
+        }
+
+        // Display quests & hide preferences form
+        form.reset();
+        showContainer(questsContainer);
+
+        output.innerHTML = `
+          <table>
+            <tr><th>Title</th><th>Description</th><th>Points</th><th>Type</th><th>Bonus</th><th>Bonus Points</th></tr>
+            ${questData.map(q => `
+              <tr>
+                <td>${q.title}</td>
+                <td>${q.description}</td>
+                <td>${q.points}</td>
+                <td>${q.type}</td>
+                <td>${q.bonusObjective || '-'}</td>
+                <td>${q.bonusPoints || 0}</td>
+              </tr>
+            `).join('')}
+          </table>
+          <p style="margin-top:15px; font-style: italic;">Quests generated just for you!</p>
+        `;
+
+      } catch (err) {
+        console.error(err);
+        output.innerHTML = "<p>There was an error generating your quests. Please try again.</p>";
+      }
+    });
+  </script>
+</body>
+</html>
