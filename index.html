@@ -163,20 +163,6 @@
     const output = document.getElementById('output');
     const authMessage = document.getElementById('authMessage');
 
-    // Listen for messages from magic link popup/tab
-    window.addEventListener('message', (event) => {
-      if (event.origin !== window.location.origin) return;
-      
-      if (event.data.type === 'SUPABASE_AUTH_SUCCESS') {
-        authMessage.textContent = 'Successfully signed in! Welcome back.';
-        authMessage.style.display = 'block';
-        setTimeout(() => {
-          authMessage.style.display = 'none';
-        }, 5000);
-        checkUser();
-      }
-    });
-
     async function checkUser() {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
@@ -216,9 +202,6 @@
       const email = prompt('Enter your email to receive a magic login link:');
       if (!email) return alert('Email is required.');
 
-      // Store the current tab reference
-      window.name = 'mainQuestTab';
-
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
@@ -229,7 +212,7 @@
       if (error) {
         alert('Error sending link: ' + error.message);
       } else {
-        alert('Magic link sent! Check your email. The link will open in this same tab.');
+        alert('Magic link sent! Check your email.');
       }
     });
 
