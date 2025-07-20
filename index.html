@@ -105,19 +105,20 @@
       signInBtn.addEventListener('click', async () => {
         const email = prompt('Enter your email:');
         if (!email) return alert('Email is required.');
+
         const { error } = await supabase.auth.signInWithOtp(
           { email },
           {
             options: {
-              // ← point to the new callback page
               emailRedirectTo: 'https://direomicron.github.io/Questing/callback.html'
-
             }
           }
         );
+
         if (error) alert('Error sending magic link: ' + error.message);
         else       alert('Magic link sent! Check your email.');
       });
+
 
       // Sign out
       signOutBtn.addEventListener('click', async () => {
