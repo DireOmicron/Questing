@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quest Preferences</title>
+  <style>
+    /* ————— your existing styles unchanged ————— */
+    body { font-family: "Segoe UI", sans-serif; background: #f2f4f8; padding: 30px; }
+    .container { max-width:600px; margin:auto; background:#fff; padding:25px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
+    h1 { text-align:center; margin-bottom:20px; color:#2c3e50; }
+    label { display:block; margin-top:15px; font-weight:600; }
+    input[type="text"], textarea, select { width:100%; padding:10px; margin-top:6px; border:1px solid #ccc; border-radius:6px; font-size:1em; }
+    .checkbox-group { display:flex; flex-wrap:wrap; gap:15px; margin-top:10px; }
+    .checkbox-group label { font-weight:normal; display:flex; align-items:center; gap:6px; }
+    button { margin-top:25px; width:100%; padding:12px; background:#3498db; color:white; border:none; border-radius:8px; font-size:1em; cursor:pointer; }
+    button:hover { background:#2980b9; }
+    #output { margin-top:30px; padding:20px; background:#ecf0f1; border-radius:8px; white-space:pre-wrap; }
+    table { width:100%; border-collapse:collapse; margin-top:20px; }
+    th, td { border:1px solid #ccc; padding:8px; text-align:left; }
+    th { background-color:#eee; }
+  </style>
+
+  <!-- Google Places API (unchanged) -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAzhzBrT-PlDN1oXBgmLDV15VQ47OpwuTc&libraries=places"></script>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Set Your Quest Preferences</h1>
+
+    <div id="auth-section">
+      <button id="signInBtn">Sign In (Magic Link)</button>
+      <button id="signOutBtn" style="display:none;">Sign Out</button>
+      <p id="userInfo">Checking login status…</p>
+    </div>
+
+    <form id="prefForm" style="display:none;">
+      <!-- … your existing form fields … -->
+      <label>Your Location:</label>
+      <input type="text" id="autocomplete" placeholder="Start typing an address…"/>
+      <!-- quest types, transports, blurb, etc. -->
+      <label>Tell us a bit about yourself:</label>
+      <textarea id="blurb" rows="4" placeholder="I love bookstores…"></textarea>
+      <button type="submit">Submit Preferences</button>
+    </form>
+
+    <div id="output"></div>
+  </div>
+
+  <script>
+    // Google Places autocomplete
+    function initAutocomplete() {
+      const input = document.getElementById("autocomplete");
+      const options = { types:['geocode'], componentRestrictions:{ country:"us" } };
+      const autocomplete = new google.maps.places.Autocomplete(input, options);
+    }
+    window.onload = initAutocomplete;
+  </script>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+    // 1) Initialize Supabase
+    const supabaseUrl   = 'https://ilxfdmrmmwubonhhehli.supabase.co';
+    const supabaseKey   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlseGZkbXJtbXd1Ym9uaGhlaGxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxNzcwMjUsImV4cCI6MjA2NDc1MzAyNX0.8pGK56shCloMDmW59wqpn0vBJ01LvrtU8CITSFn46Iw'; // ← replace with your anon key
+    const supabase      = createClient(supabaseUrl, supabaseKey);
+
+    // 2) Listen for the “logged in” ping from the callback tab
+    window.addEventListener('message', evt => {
+      if (evt.origin !== window.location.origin) return;
+      if (evt.data === 'supabase-auth-success') {
+        // Supabase has stored the session in LocalStorage
+        supabase.auth.getSession().then(({ data }) => {
+          if (data.session) showLoggedIn();
+        });
+      }
+    });
+
+    // 3) Page UI hooks
+    document.addEventListener('DOMContentLoaded', () => {
+      const signInBtn   = document.getElementById('signInBtn');
+      const signOutBtn  = document.getElementById('signOutBtn');
+      const userInfo    = document.getElementById('userInfo');
+      const form        = document.getElementById('prefForm');
+      const output      = document.getElementById('output');
+
+      // Show/hide based on session
+      async function checkUser() {
+        const { data:{ session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          userInfo.textContent   = `Signed in as ${session.user.email}`;
+          signInBtn.style.display  = 'none';
+          signOutBtn.style.display = 'inline-block';
+          form.style.display       = 'block';
+        } else {
+          userInfo.textContent   = 'Not signed in';
+          signInBtn.style.display  = 'inline-block';
+          signOutBtn.style.display = 'none';
+          form.style.display       = 'none';
+        }
+      }
+
+      // Send magic link
+      signInBtn.addEventListener('click', async () => {
+        const email = prompt('Enter your email:');
+        if (!email) return alert('Email is required.');
+
+        const { error } = await supabase.auth.signInWithOtp(
+          { email },
+          {
+            options: {
+              emailRedirectTo: 'https://direomicron.github.io/Questing/callback.html'
+            }
+          }
+        );
+
+        if (error) alert('Error sending magic link: ' + error.message);
+        else       alert('Magic link sent! Check your email.');
+      });
+
+
+      // Sign out
+      signOutBtn.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        await checkUser();
+      });
+
+      // React to any state change (e.g. multi‑tab, callback)  
+      supabase.auth.onAuthStateChange(() => checkUser());
+
+      checkUser(); // initial check
+
+      // … your existing form handler for generating & displaying quests …
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        // pull session.user.id, form values, call your backend, etc.
+      });
+    });
+
+    // Stub functions—keep your existing implementations
+    function showLoggedIn()   { /* … */ }
+    function showLoggedOut()  { /* … */ }
+  </script>
+</body>
+</html>
