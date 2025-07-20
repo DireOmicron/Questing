@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Logging you in…</title>
+    <style>
+      body { font-family: sans-serif; text-align: center; padding: 2em; }
+    </style>
+  </head>
+  <body>
+    <p>Logging you in…</p>
+    <script type="module">
+      import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+      const supabase = createClient(
+        'https://ilxfdmrmmwubonhhehli.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlseGZkbXJtbXd1Ym9uaGhlaGxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxNzcwMjUsImV4cCI6MjA2NDc1MzAyNX0.8pGK56shCloMDmW59wqpn0vBJ01LvrtU8CITSFn46Iw'
+      )
+
+      ;(async () => {
+        const { data: { session }, error } =
+          await supabase.auth.getSessionFromUrl({ storeSession: true })
+
+        if (error) {
+          document.body.textContent = '⚠️ Login failed'
+          return console.error(error)
+        }
+
+        // Tell the opener tab we’re signed in
+        window.opener?.postMessage('supabase-auth-success', window.location.origin)
+
+        // Let the user know, then close
+        document.body.innerHTML = '<h2>✅ Logged in! You can close this tab.</h2>'
+        setTimeout(() => window.close(), 2000)
+      })()
+    </script>
+  </body>
+</html>
