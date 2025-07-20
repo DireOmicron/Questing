@@ -82,13 +82,6 @@
     th {
       background-color: #eee;
     }
-    .auth-message {
-      background: #e8f5e8;
-      padding: 10px;
-      border-radius: 4px;
-      margin: 10px 0;
-      color: #2d5a2d;
-    }
   </style>
 
   <!-- Load Supabase library -->
@@ -103,7 +96,6 @@
       <button id="signInBtn">Sign In (Magic Link)</button>
       <button id="signOutBtn" style="display:none;">Sign Out</button>
       <p id="userInfo">Checking login status...</p>
-      <div id="authMessage" class="auth-message" style="display:none;"></div>
     </div>
 
     <form id="prefForm" style="display:none;">
@@ -161,21 +153,6 @@
     const userInfo = document.getElementById('userInfo');
     const form = document.getElementById('prefForm');
     const output = document.getElementById('output');
-    const authMessage = document.getElementById('authMessage');
-
-    // Listen for messages from magic link popup/tab
-    window.addEventListener('message', (event) => {
-      if (event.origin !== window.location.origin) return;
-      
-      if (event.data.type === 'SUPABASE_AUTH_SUCCESS') {
-        authMessage.textContent = 'Successfully signed in! Welcome back.';
-        authMessage.style.display = 'block';
-        setTimeout(() => {
-          authMessage.style.display = 'none';
-        }, 5000);
-        checkUser();
-      }
-    });
 
     async function checkUser() {
       const { data: { session }, error } = await supabase.auth.getSession();
@@ -205,14 +182,14 @@
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: 'https://direomicron.github.io/Questing/auth-callback.html'
+          emailRedirectTo: window.location.origin + '/Questing/'
         }
       });
 
       if (error) {
         alert('Error sending link: ' + error.message);
       } else {
-        alert('Magic link sent! Check your email. The link will sign you in and redirect back here.');
+        alert('Magic link sent! Check your email.');
       }
     });
 
@@ -222,12 +199,8 @@
       await checkUser();
     });
 
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN') {
-        await checkUser();
-      } else if (event === 'SIGNED_OUT') {
-        await checkUser();
-      }
+    supabase.auth.onAuthStateChange((_event, session) => {
+      checkUser();
     });
 
     await checkUser();
