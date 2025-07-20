@@ -163,20 +163,6 @@
     const output = document.getElementById('output');
     const authMessage = document.getElementById('authMessage');
 
-    // Listen for messages from magic link popup/tab
-    window.addEventListener('message', (event) => {
-      if (event.origin !== window.location.origin) return;
-      
-      if (event.data.type === 'SUPABASE_AUTH_SUCCESS') {
-        authMessage.textContent = 'Successfully signed in! Welcome back.';
-        authMessage.style.display = 'block';
-        setTimeout(() => {
-          authMessage.style.display = 'none';
-        }, 5000);
-        checkUser();
-      }
-    });
-
     async function checkUser() {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
@@ -190,15 +176,10 @@
         signInBtn.style.display = 'none';
         signOutBtn.style.display = 'inline-block';
         form.style.display = 'block';
-        
-        // Check if this is a magic link callback and we have an opener
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('access_token') && window.opener && !window.opener.closed) {
-          // Notify the parent window of successful auth
-          window.opener.postMessage({ type: 'SUPABASE_AUTH_SUCCESS' }, window.location.origin);
-          // Close this popup/tab
-          window.close();
-          return;
+
+        // Clean up the URL hash after successful login
+        if (window.location.hash) {
+          window.history.replaceState(null, '', window.location.pathname);
         }
       } else {
         userInfo.textContent = 'Not signed in';
@@ -215,7 +196,7 @@
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: window.location.origin + window.location.pathname
+          emailRedirectTo: window.location.href
         }
       });
 
@@ -233,11 +214,7 @@
     });
 
     supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN') {
-        await checkUser();
-      } else if (event === 'SIGNED_OUT') {
-        await checkUser();
-      }
+      await checkUser();
     });
 
     await checkUser();
