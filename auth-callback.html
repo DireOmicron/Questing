@@ -55,7 +55,7 @@
         
         <!-- Fallback link in case redirect doesn't work -->
         <p style="margin-top: 30px;">
-            <a href="./" id="fallback-link" style="display: none; color: #3498db; text-decoration: none;">
+            <a href="https://direomicron.github.io/Questing/" id="fallback-link" style="display: none; color: #3498db; text-decoration: none;">
                 Click here if you're not redirected automatically
             </a>
         </p>
@@ -91,7 +91,7 @@
                     setTimeout(() => {
                         if (!redirected) {
                             redirected = true;
-                            window.location.href = './';
+                            window.location.href = 'https://direomicron.github.io/Questing/';
                         }
                     }, 1500);
                 } else {
@@ -119,7 +119,7 @@
                 
                 // Redirect after a brief delay
                 setTimeout(() => {
-                    window.location.href = './';
+                    window.location.href = 'https://direomicron.github.io/Questing/';
                 }, 1500);
             } else if (event === 'SIGNED_OUT') {
                 statusEl.textContent = 'Authentication Failed';
