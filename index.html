@@ -185,6 +185,20 @@
         return;
       }
 
+      // Check if this is a magic link callback (has hash fragments)
+      const urlHash = window.location.hash;
+      if (urlHash && (urlHash.includes('access_token') || urlHash.includes('refresh_token'))) {
+        // Clean up the URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Show success message
+        authMessage.textContent = 'Successfully signed in via magic link!';
+        authMessage.style.display = 'block';
+        setTimeout(() => {
+          authMessage.style.display = 'none';
+        }, 5000);
+      }
+
       if (session?.user) {
         userInfo.textContent = `Signed in as ${session.user.email}`;
         signInBtn.style.display = 'none';
@@ -205,7 +219,7 @@
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: 'https://direomicron.github.io/Questing/auth-callback.html'
+          emailRedirectTo: window.location.origin + '/Questing/auth-callback.html'
         }
       });
 
