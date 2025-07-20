@@ -182,7 +182,7 @@
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: 'https://direomicron.github.io/Questing/'  // <-- Set to your live site
+          emailRedirectTo: window.location.origin + '/Questing/'
         }
       });
 
