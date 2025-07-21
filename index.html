@@ -65,6 +65,24 @@
     const supabaseUrl   = 'https://ilxfdmrmmwubonhhehli.supabase.co';
     const supabaseKey   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlseGZkbXJtbXd1Ym9uaGhlaGxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxNzcwMjUsImV4cCI6MjA2NDc1MzAyNX0.8pGK56shCloMDmW59wqpn0vBJ01LvrtU8CITSFn46Iw'; // ← replace with your anon key
     const supabase      = createClient(supabaseUrl, supabaseKey);
+    // right after `const supabase = createClient(...)`:
+    ;(async () => {
+      // If this page was hit via a magic‐link, the URL will be
+      // https://…/index.html#access_token=…&refresh_token=… etc.
+      const { data:{ session }, error } = 
+        await supabase.auth.getSessionFromUrl({ storeSession: true })
+
+      if (error) {
+        console.error('Auth callback error:', error)
+      }
+
+      if (session) {
+        // remove the `#access_token=…` fragment so your URLs stay clean
+        window.history.replaceState({}, document.title, window.location.pathname)
+      }
+
+      // now your existing checkUser() / onAuthStateChange() will pick up that session…
+    })()
 
     // 2) Listen for the “logged in” ping from the callback tab
     window.addEventListener('message', evt => {
@@ -107,20 +125,21 @@
         const email = prompt('Enter your email:')
         if (!email) return alert('Email is required.')
 
-        // build the exact URL where callback.html actually lives:
-        const callbackUrl = `${window.location.origin}/Questing/callback.html`
+        // redirect back to your index.html
+        const redirectTo = `${window.location.origin}/Questing/index.html`
 
         const { error } = await supabase.auth.signInWithOtp({
           email,
-          options: { emailRedirectTo: callbackUrl }
+          options: { emailRedirectTo: redirectTo }
         })
 
         if (error) {
           alert('Error sending magic link: ' + error.message)
         } else {
-          alert(`Magic link sent!\nIt will redirect to:\n${callbackUrl}`)
+          alert(`Magic link sent! It will redirect you to:\n${redirectTo}`)
         }
       })
+
 
 
 
