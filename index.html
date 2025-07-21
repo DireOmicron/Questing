@@ -114,7 +114,7 @@
         const email = prompt('Enter your email:')
         if (!email) return alert('Email is required.')
 
-        // redirect back to your index.html
+        // ▶️ now redirect back to index.html
         const redirectTo = `${window.location.origin}/Questing/index.html`
 
         const { error } = await supabase.auth.signInWithOtp({
@@ -128,8 +128,6 @@
           alert(`Magic link sent! It will redirect you to:\n${redirectTo}`)
         }
       })
-
-
 
 
       // Sign out
