@@ -8,29 +8,23 @@
 <body>
   <p>Logging you in…</p>
 
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+ <script type="module">
+  import { createClient } from '@supabase/supabase-js'
+  const supabase = createClient('https://…', 'YOUR_ANON_KEY')
 
-    const supabase = createClient(
-      'https://ilxfdmrmmwubonhhehli.supabase.co',
-      'YOUR_ANON_KEY'
-    )
+  (async () => {
+    // 1) grab & store session
+    const { data: { session }, error } =
+      await supabase.auth.getSessionFromUrl({ storeSession: true })
 
-    ;(async () => {
-      // 1) Capture & store the incoming session
-      const { data: { session }, error } = 
-        await supabase.auth.getSessionFromUrl({ storeSession: true })
+    if (error) {
+      document.body.innerHTML = `<p>⚠️ Login failed: ${error.message}</p>`
+      return
+    }
 
-      if (error) {
-        document.body.innerHTML = `<p>⚠️ Login failed: ${error.message}</p>`
-        console.error(error)
-        return
-      }
-
-      // 2) Redirect *this* tab back into your app
-      //    Adjust the path to wherever your main index.html lives:
-      window.location.replace(`${window.location.origin}/Questing/index.html`)
-    })()
-  </script>
+    // 2) redirect *this* tab into your app
+    window.location.replace(`${window.location.origin}/Questing/index.html`)
+  })()
+</script>
 </body>
 </html>
