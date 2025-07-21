@@ -84,17 +84,6 @@
       // now your existing checkUser() / onAuthStateChange() will pick up that session…
     })()
 
-    // 2) Listen for the “logged in” ping from the callback tab
-    window.addEventListener('message', evt => {
-      if (evt.origin !== window.location.origin) return;
-      if (evt.data === 'supabase-auth-success') {
-        // Supabase has stored the session in LocalStorage
-        supabase.auth.getSession().then(({ data }) => {
-          if (data.session) showLoggedIn();
-        });
-      }
-    });
-
     // 3) Page UI hooks
     document.addEventListener('DOMContentLoaded', () => {
       const signInBtn   = document.getElementById('signInBtn');
